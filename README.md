@@ -1,4 +1,4 @@
-# RouteLog v0.08
+# RouteLog v0.09
 
 GPS移動記録・ルート履歴管理Webアプリの初期実装です。
 
@@ -87,3 +87,10 @@ Supabase AuthenticationでGoogle Providerを有効にし、RouteLog設定画面�
 - 設定画面からアカウント項目も削除
 - 右上のアカウントボタンからGoogleログイン / ログアウト
 - 保存と端末間共有は自動処理し、利用者に意識させない設計へ変更
+
+
+## v0.09
+- Android Chromeでアンインストール後も「インストール済み」と判定される問題への対策
+- Web App Manifest の `id` を新しい固定IDへ変更
+- PWA開始URLとキャッシュバージョンを更新
+- 表示名はRouteLogのまま維持

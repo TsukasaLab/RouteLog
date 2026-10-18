@@ -65,7 +65,7 @@ function topbar(extra=""){
     ? esc((state.cloudUser.email.split("@")[0]||"G").slice(0,1).toUpperCase())
     : "G";
   const accountBtn = `<button class="account-btn ${state.cloudUser?"signed-in":""}" id="accountBtn" aria-label="Googleアカウント">${accountLabel}</button>`;
-  return `<header class="topbar"><div class="brand"><img src="./icon-192.png?v=008" alt="">RouteLog</div><div class="top-actions">${live}${extra||""}${accountBtn}</div></header>`
+  return `<header class="topbar"><div class="brand"><img src="./icon-192.png?v=009" alt="">RouteLog</div><div class="top-actions">${live}${extra||""}${accountBtn}</div></header>`
 }
 function shell(content,active,extra=""){
   return `<div class="app-shell">${topbar(extra)}<main class="page">${content}</main>${nav(active)}</div>`
@@ -792,7 +792,7 @@ window.addEventListener("appinstalled",()=>{
 if("serviceWorker" in navigator){
   window.addEventListener("load",async()=>{
     try{
-      const reg=await navigator.serviceWorker.register("./sw.js?v=008",{updateViaCache:"none"});
+      const reg=await navigator.serviceWorker.register("./sw.js?v=009",{updateViaCache:"none"});
       await reg.update();
     }catch{}
   });

@@ -1,22 +1,36 @@
 {
   "name": "RouteLog",
   "short_name": "RouteLog",
-  "start_url": "./",
+  "start_url": "/RouteLog/?source=pwa",
   "display": "standalone",
   "background_color": "#f5f8fb",
   "theme_color": "#173b5e",
   "icons": [
     {
-      "src": "./icon-192.png",
+      "src": "/RouteLog/icon-192.png?v=007",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "./icon-512.png",
+      "src": "/RouteLog/icon-512.png?v=007",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/RouteLog/icon-512.png?v=007",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ]
+  ],
+  "id": "/RouteLog/",
+  "scope": "/RouteLog/",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "prefer_related_applications": false,
+  "description": "GPSで移動ルートを記録し、過去の道のりや立ち寄りを振り返れるアプリ"
 }

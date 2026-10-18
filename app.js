@@ -33,7 +33,7 @@ let state = {
   stayCandidates:restoredActive?.stayCandidates||[],
   recoveredActive:!!restoredActive,
   wakeLock:null,
-  pickMode:null, manual:{start:null,end:null,stops:[]}
+  pickMode:null, manual:{start:null,end:null,stops:[]}, installPrompt:null
 };
 
 function toast(msg){
@@ -106,6 +106,7 @@ function home(){
     <section class="home-actions">
       <button class="big-action primary" data-nav="record">▶　GPS記録</button>
       <button class="big-action secondary" data-nav="manual">＋　手動で追加</button>
+      <button class="btn soft" id="installApp" style="display:${state.installPrompt?"block":"none"};grid-column:1/-1">ホーム画面にRouteLogを追加</button>
     </section>
     <section class="quick-grid">
       <button class="quick" data-nav="map"><span class="qicon">🗺</span>すべてのルート</button>
@@ -666,6 +667,16 @@ function render(){
 }
 function bind(){
   document.querySelectorAll("[data-nav]").forEach(b=>b.onclick=()=>go(b.dataset.nav));
+  document.querySelector("#installApp")?.addEventListener("click",async()=>{
+    if(!state.installPrompt){
+      toast("Chromeのメニューから「ホーム画面に追加」を選んでください");
+      return;
+    }
+    state.installPrompt.prompt();
+    await state.installPrompt.userChoice.catch(()=>{});
+    state.installPrompt=null;
+    render();
+  });
   document.querySelectorAll("[data-trip]").forEach(b=>b.onclick=()=>go("detail",b.dataset.trip));
   document.querySelector("#beginGps")?.addEventListener("click",beginGps);
   document.querySelector("#pauseGps")?.addEventListener("click",()=>{
@@ -768,8 +779,24 @@ window.addEventListener("beforeunload",()=>{
 document.addEventListener("visibilitychange",()=>{
   if(document.visibilityState==="visible"&&state.tracking&&!state.wakeLock)requestWakeLock()
 });
+window.addEventListener("beforeinstallprompt",e=>{
+  e.preventDefault();
+  state.installPrompt=e;
+  const btn=document.querySelector("#installApp");
+  if(btn)btn.style.display="block";
+});
+window.addEventListener("appinstalled",()=>{
+  state.installPrompt=null;
+  toast("RouteLogをホーム画面に追加しました");
+});
+
 if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}))
+  window.addEventListener("load",async()=>{
+    try{
+      const reg=await navigator.serviceWorker.register("./sw.js?v=007",{updateViaCache:"none"});
+      await reg.update();
+    }catch{}
+  });
 }
 
 render();

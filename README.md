@@ -1,4 +1,4 @@
-# RouteLog v0.06
+# RouteLog v0.07
 
 GPS移動記録・ルート履歴管理Webアプリの初期実装です。
 
@@ -70,3 +70,12 @@ Supabase AuthenticationでGoogle Providerを有効にし、RouteLog設定画面�
 - Supabase Project URL の誤記を修正（末尾 `...bicb`）
 - Googleログイン時の接続先エラーを修正
 - PWAキャッシュを更新
+
+
+## v0.07
+- GitHub Pages/PWAのキャッシュ更新処理を改善
+- HTML/CSS/JS/manifestをv0.07へ強制更新
+- Service Workerをネット優先に変更し、古い画面が残り続ける問題を軽減
+- PWAのid / scope / start_urlを `/RouteLog/` に固定
+- Chromeが対応している場合「ホーム画面にRouteLogを追加」ボタンを表示
+- `.nojekyll`を追加

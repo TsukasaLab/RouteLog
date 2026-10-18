@@ -1,4 +1,4 @@
-# RouteLog v0.09
+# RouteLog v0.10
 
 GPS移動記録・ルート履歴管理Webアプリの初期実装です。
 
@@ -94,3 +94,9 @@ Supabase AuthenticationでGoogle Providerを有効にし、RouteLog設定画面�
 - Web App Manifest の `id` を新しい固定IDへ変更
 - PWA開始URLとキャッシュバージョンを更新
 - 表示名はRouteLogのまま維持
+
+
+## v0.10
+- 自動保存成功時の「クラウド同期が完了しました」表示を削除
+- 利用者向けエラー文言を「保存できませんでした」に統一
+- 保存・端末間共有の仕組みを意識させない共通UI方針を反映

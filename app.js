@@ -65,7 +65,7 @@ function topbar(extra=""){
     ? esc((state.cloudUser.email.split("@")[0]||"G").slice(0,1).toUpperCase())
     : "G";
   const accountBtn = `<button class="account-btn ${state.cloudUser?"signed-in":""}" id="accountBtn" aria-label="Googleアカウント">${accountLabel}</button>`;
-  return `<header class="topbar"><div class="brand"><img src="./icon-192.png?v=009" alt="">RouteLog</div><div class="top-actions">${live}${extra||""}${accountBtn}</div></header>`
+  return `<header class="topbar"><div class="brand"><img src="./icon-192.png?v=010" alt="">RouteLog</div><div class="top-actions">${live}${extra||""}${accountBtn}</div></header>`
 }
 function shell(content,active,extra=""){
   return `<div class="app-shell">${topbar(extra)}<main class="page">${content}</main>${nav(active)}</div>`
@@ -575,11 +575,10 @@ async function cloudSyncAll(){
       await cloudSavePrefs();
     }
     for(const t of state.trips)await cloudUpsert("trip:"+t.id,t);
-    state.cloudStatus=`同期済み：${state.cloudUser?.email||"Googleアカウント"}`;
-    toast("クラウド同期が完了しました");
+    state.cloudStatus="保存済み";
   }catch(e){
     state.cloudStatus="同期失敗";
-    toast("同期失敗: "+(e.message||e));
+    toast("保存できませんでした");
   }finally{
     state.syncing=false;render();
   }
@@ -792,7 +791,7 @@ window.addEventListener("appinstalled",()=>{
 if("serviceWorker" in navigator){
   window.addEventListener("load",async()=>{
     try{
-      const reg=await navigator.serviceWorker.register("./sw.js?v=009",{updateViaCache:"none"});
+      const reg=await navigator.serviceWorker.register("./sw.js?v=010",{updateViaCache:"none"});
       await reg.update();
     }catch{}
   });

@@ -13,7 +13,7 @@ function clone(v){try{return structuredClone(v)}catch{return JSON.parse(JSON.str
 function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):clone(d)}catch{return clone(d)}}
 function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
 
-const defaultCloud = {url:"",anonKey:""};
+const defaultCloud = {url:"https://pmvtelodpxjwwklybibc.supabase.co",anonKey:"sb_publishable_KEcfQP5KbJk_NVp0jfaAMg_bCDUT0m0"};
 const restoredActive = load(LS.active,null);
 
 let state = {
@@ -22,7 +22,7 @@ let state = {
   categories:load(LS.categories,SAMPLE.categories),
   tags:load(LS.tags,SAMPLE.tags),
   settings:load(LS.settings,SAMPLE.settings),
-  cloud:load(LS.cloud,defaultCloud),
+  cloud:defaultCloud,
   cloudStatus:"未設定", cloudClient:null, cloudUser:null, syncing:false,
   period:"all",
   map:null, routeLayers:[],
@@ -432,40 +432,34 @@ function saveManual(){
 }
 
 /* ---------- Cloud ---------- */
-function cloudConfigured(){return !!(state.cloud.url&&state.cloud.anonKey)}
+function cloudConfigured(){return true}
 function cloudStatusHtml(){
   const ok=state.cloudStatus.startsWith("接続済");
   const warn=state.cloudStatus==="同期中"||state.cloudStatus==="接続中";
   return `<div class="cloud-status"><span class="cloud-dot ${ok?"ok":warn?"warn":state.cloudStatus==="未設定"?"":"ng"}"></span><b>${esc(state.cloudStatus)}</b></div>`
 }
 async function initCloud(showToast=false){
-  if(!cloudConfigured()){
-    state.cloudClient=null;state.cloudUser=null;state.cloudStatus="未設定";
-    if(showToast)toast("Supabase設定を入力してください");
-    return false;
-  }
   if(!window.supabase?.createClient){
-    state.cloudStatus="ライブラリ読込失敗";return false;
+    state.cloudStatus="接続準備に失敗";return false;
   }
   try{
-    state.cloudStatus="接続中";
     state.cloudClient=window.supabase.createClient(state.cloud.url,state.cloud.anonKey,{
       auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
     });
-    let {data:{session}}=await state.cloudClient.auth.getSession();
-    if(!session){
-      const r=await state.cloudClient.auth.signInAnonymously();
-      if(r.error)throw r.error;
-      session=r.data.session;
-    }
+    const {data:{session},error}=await state.cloudClient.auth.getSession();
+    if(error)throw error;
     state.cloudUser=session?.user||null;
-    if(!state.cloudUser)throw new Error("認証ユーザーを取得できません");
-    state.cloudStatus=state.cloudUser?.email?`接続済（${state.cloudUser.email}）`:"接続済（匿名・この端末）";
-    if(showToast)toast(state.cloudUser?.email?"Googleアカウントで接続しました":"匿名ユーザーで接続しました");
-    return true;
+    if(state.cloudUser){
+      state.cloudStatus=`同期中：${state.cloudUser.email||"Googleアカウント"}`;
+      if(showToast)toast("Googleアカウントでログイン済みです");
+      return true;
+    }
+    state.cloudStatus="未ログイン";
+    if(showToast)toast("Googleでログインしてください");
+    return false;
   }catch(e){
     state.cloudStatus="接続失敗";
-    if(showToast)toast("クラウド接続失敗: "+(e.message||e));
+    if(showToast)toast("接続に失敗しました。もう一度開き直してください");
     return false;
   }
 }
@@ -480,23 +474,24 @@ async function cloudUpsert(key,payload){
   return true;
 }
 async function cloudSaveTrip(t){
-  if(!cloudConfigured())return;
-  try{await cloudUpsert("trip:"+t.id,t);state.cloudStatus="接続済"}catch(e){state.cloudStatus="同期失敗"}
+  if(!state.cloudUser)return;
+  try{
+    await cloudUpsert("trip:"+t.id,t);
+    state.cloudStatus=`同期済み：${state.cloudUser.email||"Googleアカウント"}`;
+  }catch(e){state.cloudStatus="同期に失敗"}
 }
 async function cloudSavePrefs(){
-  if(!cloudConfigured())return;
+  if(!state.cloudUser)return;
   try{
     await cloudUpsert("prefs",{categories:state.categories,tags:state.tags,settings:state.settings});
-    state.cloudStatus="接続済";
-  }catch(e){state.cloudStatus="同期失敗"}
+    state.cloudStatus=`同期済み：${state.cloudUser.email||"Googleアカウント"}`;
+  }catch(e){state.cloudStatus="同期に失敗"}
 }
 
 async function cloudGoogleLogin(){
-  if(!cloudConfigured()){toast("先にProject URLと公開キーを保存してください");return}
+  
   try{
-    if(!state.cloudClient){
-      const ok=await initCloud(false);if(!ok)throw new Error("Supabaseに接続できません");
-    }
+    if(!state.cloudClient){ await initCloud(false); }
     const redirectTo=window.location.origin+window.location.pathname;
     const {error}=await state.cloudClient.auth.signInWithOAuth({
       provider:"google",
@@ -512,7 +507,7 @@ async function cloudSyncAll(){
   if(state.syncing)return;
   state.syncing=true;state.cloudStatus="同期中";render();
   try{
-    const ok=await initCloud(false);if(!ok)throw new Error("クラウドへ接続できません");
+    const ok=await initCloud(false);if(!ok){toast("先にGoogleでログインしてください");return;}
     const {data,error}=await state.cloudClient.from("routelog_data").select("key,payload,updated_at");
     if(error)throw error;
     const cloudTrips=[];
@@ -538,7 +533,7 @@ async function cloudSyncAll(){
       await cloudSavePrefs();
     }
     for(const t of state.trips)await cloudUpsert("trip:"+t.id,t);
-    state.cloudStatus="接続済・同期完了";
+    state.cloudStatus=`同期済み：${state.cloudUser?.email||"Googleアカウント"}`;
     toast("クラウド同期が完了しました");
   }catch(e){
     state.cloudStatus="同期失敗";
@@ -550,28 +545,63 @@ async function cloudSyncAll(){
 
 /* ---------- Settings ---------- */
 function settings(){
+  const accountHtml = state.cloudUser
+    ? `<div class="setting-row">
+         <div>
+           <b>${esc(state.cloudUser.email||"Googleアカウント")}</b>
+           <div class="desc">このアカウントに記録を自動保存します</div>
+         </div>
+         <button class="btn" id="cloudLogout">ログアウト</button>
+       </div>
+       <div class="setting-row">
+         <div class="cloud-status"><span class="cloud-dot ok"></span><b>${esc(state.cloudStatus)}</b></div>
+       </div>`
+    : `<div class="setting-row">
+         <div>
+           <b>Googleアカウント</b>
+           <div class="desc">ログインすると記録が自動保存され、別の端末でも使えます</div>
+         </div>
+       </div>
+       <div class="cloud-actions" style="grid-template-columns:1fr">
+         <button class="btn primary" id="googleCloud">Googleでログイン</button>
+       </div>`;
+
   return shell(`
-    <section class="settings-group"><h3>クラウド同期（Supabase）</h3>
-      <div class="setting-row">${cloudStatusHtml()}</div>
-      <div class="field" style="padding:12px 14px 0"><label>Project URL</label><input id="cloudUrl" value="${esc(state.cloud.url)}" placeholder="https://xxxxx.supabase.co"></div>
-      <div class="field" style="padding:12px 14px 0"><label>Anon / Publishable key</label><textarea id="cloudKey" class="cloud-key" placeholder="公開用キーのみ入力">${esc(state.cloud.anonKey)}</textarea></div>
-      <div class="cloud-help">service_roleキーは入力しないでください。接続すると端末ごとの匿名ユーザーで認証し、記録と設定をクラウドへ同期します。</div>
-      <div class="cloud-actions"><button class="btn primary" id="saveCloud">保存して接続</button><button class="btn soft" id="syncCloud">今すぐ同期</button></div>
-      <div class="cloud-actions"><button class="btn" id="googleCloud">Googleでログイン</button><button class="btn" id="cloudLogout">ログアウト</button></div>
+    <section class="settings-group"><h3>アカウント</h3>
+      ${accountHtml}
     </section>
+
     <section class="settings-group"><h3>滞在判定の設定</h3>
-      <div class="setting-row"><div><b>滞在判定距離</b><div class="desc">この半径内に留まった場合</div></div><div><input id="stayRadius" type="number" min="10" max="1000" value="${state.settings.stayRadius}"> m</div></div>
-      <div class="setting-row"><div><b>滞在判定時間</b><div class="desc">一定時間動かなければ候補化</div></div><div><input id="stayMinutes" type="number" min="1" max="1440" value="${state.settings.stayMinutes}"> 分</div></div>
+      <div class="setting-row">
+        <div><b>滞在判定距離</b><div class="desc">この半径内に留まった場合</div></div>
+        <div><input id="stayRadius" type="number" min="10" max="1000" value="${state.settings.stayRadius}"> m</div>
+      </div>
+      <div class="setting-row">
+        <div><b>滞在判定時間</b><div class="desc">一定時間動かなければ候補化</div></div>
+        <div><input id="stayMinutes" type="number" min="1" max="1440" value="${state.settings.stayMinutes}"> 分</div>
+      </div>
     </section>
+
     <section class="settings-group"><h3>カテゴリ管理</h3>
       <div id="catRows">${catRows()}</div>
       <div class="add-row"><input id="newCat" placeholder="新しいカテゴリ名"><button class="btn soft" id="addCat">＋追加</button></div>
     </section>
+
     <section class="settings-group"><h3>タグ管理</h3>
       <div class="add-row"><input id="newTag" placeholder="新しいタグ"><button class="btn soft" id="addTag">＋追加</button></div>
-      <div style="padding:0 14px 14px" class="tags">${state.tags.map(t=>`<span class="pill">${esc(t)} <button class="tagDel" data-tag="${esc(t)}" style="border:0;background:none">×</button></span>`).join("")}</div>
+      <div style="padding:0 14px 14px" class="tags">
+        ${state.tags.map(t=>`<span class="pill">${esc(t)} <button class="tagDel" data-tag="${esc(t)}" style="border:0;background:none">×</button></span>`).join("")}
+      </div>
     </section>
-    <section class="settings-group"><h3>データ管理</h3>
+
+    <section class="settings-group"><h3>データ</h3>
+      <div class="setting-row">
+        <div>
+          <b>同期</b>
+          <div class="desc">${state.cloudUser?"Googleアカウントへ自動保存中":"Googleログイン後に自動保存されます"}</div>
+        </div>
+        ${state.cloudUser?`<button class="btn soft" id="syncCloud">同期する</button>`:""}
+      </div>
       <div class="setting-row"><span>サンプルデータに戻す</span><button class="btn" id="resetSample">リセット</button></div>
     </section>
   `,"settings");
@@ -665,19 +695,12 @@ function bind(){
     }
   });
   document.querySelector("#saveManual")?.addEventListener("click",saveManual);
-
-  document.querySelector("#saveCloud")?.addEventListener("click",async()=>{
-    state.cloud.url=v("#cloudUrl").trim().replace(/\/$/,"");
-    state.cloud.anonKey=v("#cloudKey").trim();
-    save(LS.cloud,state.cloud);
-    await initCloud(true);render();
-  });
   document.querySelector("#syncCloud")?.addEventListener("click",cloudSyncAll);
   document.querySelector("#googleCloud")?.addEventListener("click",cloudGoogleLogin);
   document.querySelector("#cloudLogout")?.addEventListener("click",async()=>{
     try{
       if(state.cloudClient)await state.cloudClient.auth.signOut();
-      state.cloudUser=null;state.cloudStatus="未接続";
+      state.cloudUser=null;state.cloudStatus="未ログイン";
       toast("クラウドからログアウトしました");render();
     }catch(e){toast("ログアウトに失敗しました")}
   });
@@ -750,5 +773,10 @@ if("serviceWorker" in navigator){
 }
 
 render();
-if(cloudConfigured())initCloud(false).then(()=>{ if(state.screen==="settings")render() });
+initCloud(false).then(async ok=>{
+  if(ok){
+    try{ await cloudSyncAll(); }catch{}
+  }
+  if(state.screen==="settings")render();
+});
 })();

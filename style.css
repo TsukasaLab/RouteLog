@@ -316,3 +316,98 @@ button{cursor:pointer}
 .leaflet-interactive.gps-current-marker{
   filter:drop-shadow(0 2px 5px rgba(0,0,0,.28));
 }
+
+
+/* v0.14 RouteLog map theme */
+.routelog-map{
+  background:#eaf1f7 !important;
+  font-family:inherit;
+}
+.routelog-map .routelog-base-tiles{
+  filter:
+    grayscale(.34)
+    saturate(.62)
+    brightness(1.08)
+    contrast(.90)
+    hue-rotate(168deg);
+}
+.routelog-map .leaflet-control-zoom{
+  border:0 !important;
+  box-shadow:0 6px 20px rgba(33,65,91,.16) !important;
+  border-radius:14px !important;
+  overflow:hidden;
+  background:rgba(255,255,255,.94);
+  backdrop-filter:blur(8px);
+}
+.routelog-map .leaflet-control-zoom a{
+  width:42px !important;
+  height:42px !important;
+  line-height:40px !important;
+  color:#173b5e !important;
+  background:rgba(255,255,255,.94) !important;
+  border:0 !important;
+  font-size:23px !important;
+  font-weight:500 !important;
+}
+.routelog-map .leaflet-control-zoom a + a{
+  border-top:1px solid #e4ebf1 !important;
+}
+.routelog-map .leaflet-control-zoom a:hover{
+  background:#eef6fd !important;
+}
+.routelog-attribution{
+  margin:0 0 4px 5px !important;
+  padding:2px 6px;
+  border-radius:8px;
+  background:rgba(255,255,255,.72);
+  color:#718096;
+  font-size:9px;
+  line-height:1.35;
+  box-shadow:none;
+  backdrop-filter:blur(5px);
+}
+.routelog-attribution a{
+  color:#5e7183;
+  text-decoration:none;
+}
+.routelog-map .leaflet-popup-content-wrapper{
+  border-radius:14px;
+  box-shadow:0 10px 32px rgba(25,54,80,.18);
+  color:#263b4d;
+}
+.routelog-map .leaflet-popup-tip{
+  box-shadow:none;
+}
+.routelog-tooltip{
+  border:0 !important;
+  border-radius:11px !important;
+  background:rgba(255,255,255,.96) !important;
+  color:#263b4d !important;
+  box-shadow:0 6px 18px rgba(25,54,80,.16) !important;
+  padding:7px 10px !important;
+}
+.routelog-tooltip:before{display:none}
+.routelog-tooltip span{
+  color:#708394;
+  font-size:11px;
+}
+.map-wrap,
+.record-map,
+.detail-map,
+.manual-map{
+  overflow:hidden;
+}
+.map-wrap .map,
+.record-map,
+.detail-map,
+.manual-map{
+  box-shadow:inset 0 0 0 1px rgba(33,65,91,.08);
+}
+.filter-card{
+  border:1px solid rgba(46,95,132,.12) !important;
+  box-shadow:0 8px 22px rgba(33,65,91,.10) !important;
+  backdrop-filter:blur(10px);
+}
+.filter-card summary{
+  color:#244866;
+}

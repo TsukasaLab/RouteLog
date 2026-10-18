@@ -91,7 +91,7 @@ function topbar(extra=""){
     ? esc((state.cloudUser.email.split("@")[0]||"G").slice(0,1).toUpperCase())
     : "G";
   const accountBtn = `<button class="account-btn ${state.cloudUser?"signed-in":""}" id="accountBtn" aria-label="Googleアカウント">${accountLabel}</button>`;
-  return `<header class="topbar"><div class="brand"><img src="./icon-192.png?v=013" alt="">RouteLog</div><div class="top-actions">${status}${accountBtn}</div></header>`
+  return `<header class="topbar"><div class="brand"><img src="./icon-192.png?v=014" alt="">RouteLog</div><div class="top-actions">${status}${accountBtn}</div></header>`
 }
 function shell(content,active,extra=""){
   return `<div class="app-shell">${topbar(extra)}<main class="page">${content}</main>${nav(active)}</div>`
@@ -145,11 +145,26 @@ function cleanupMap(){
   state.gpsMarker=null;state.gpsHalo=null;state.gpsAccuracyCircle=null;
 }
 function mapBase(id,center=[35.02,135.9],zoom=10){
+  const el=document.getElementById(id);
+  if(el)el.classList.add("routelog-map");
   const m=L.map(id,{zoomControl:false,attributionControl:false}).setView(center,zoom);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(m);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:19,
+    className:"routelog-base-tiles"
+  }).addTo(m);
   L.control.zoom({position:"bottomright"}).addTo(m);
-  L.control.attribution({position:"bottomleft",prefix:false}).addAttribution("&copy; OpenStreetMap").addTo(m);
-  state.map=m;return m;
+  const attr=L.control({position:"bottomleft"});
+  attr.onAdd=()=>{
+    const d=L.DomUtil.create("div","routelog-attribution");
+    d.innerHTML='© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+    return d;
+  };
+  attr.addTo(m);
+  state.map=m;
+  m.on("zoomend",()=>{
+    if(state.screen==="map")drawVisibleRoutes(false);
+  });
+  return m;
 }
 function tripCard(t){
   const c=cat(t.category);
@@ -267,15 +282,21 @@ function drawVisibleRoutes(fit=false){
   visibleTrips().forEach(t=>{
     const route=tripRoute(t); if(route.length<2)return;
     const c=cat(t.category);
+    const outline=L.polyline(route,{
+      color:"#ffffff",weight:t.type==="manual"?8:9,opacity:.88,
+      dashArray:t.type==="manual"?"8 8":null,
+      smoothFactor:state.map.getZoom()>=14?0:.7,
+      interactive:false
+    }).addTo(state.map);
     const line=L.polyline(route,{
-      color:c.color,weight:t.type==="manual"?4:5,opacity:.8,
+      color:c.color,weight:t.type==="manual"?4:5.5,opacity:.96,
       dashArray:t.type==="manual"?"8 8":null,
       smoothFactor:state.map.getZoom()>=14?0:.7,
       bubblingMouseEvents:false
     }).addTo(state.map);
-    line.bindTooltip(esc(t.title),{sticky:true});
+    line.bindTooltip(`<b>${esc(t.title)}</b><br><span>${esc(cat(t.category).name)} ・ ${t.distanceKm||0} km</span>`,{sticky:true,className:"routelog-tooltip"});
     line.on("click",()=>go("detail",t.id));
-    state.routeLayers.push(line);
+    state.routeLayers.push(outline,line);
     allPoints.push(...route);
   });
   if(fit && allPoints.length>1){
@@ -345,7 +366,8 @@ function drawRecordMap(){
   const center=state.trackPoints.length?state.trackPoints[state.trackPoints.length-1]:[35.003,135.875];
   const m=mapBase("recordMap",center,state.trackPoints.length?15:14);
   if(state.trackPoints.length){
-    const line=L.polyline(state.trackPoints,{color:"#117ff1",weight:6,smoothFactor:0}).addTo(m);
+    L.polyline(state.trackPoints,{color:"#ffffff",weight:10,opacity:.88,smoothFactor:0,interactive:false}).addTo(m);
+    const line=L.polyline(state.trackPoints,{color:"#117ff1",weight:6.5,opacity:.98,smoothFactor:0}).addTo(m);
     if(state.trackPoints.length>2)m.fitBounds(line.getBounds(),{padding:[24,24],maxZoom:16});
     state.gpsHalo=L.circleMarker(center,{
       radius:22,color:"#1689f5",weight:2,opacity:.35,
@@ -412,8 +434,9 @@ async function beginGps(){
       state.trackPoints.push(p);
       if(state.map && state.screen==="record"){
         if(state.trackPoints.length>1){
-          const seg=L.polyline(state.trackPoints.slice(-2),{color:"#117ff1",weight:6,smoothFactor:0}).addTo(state.map);
-          state.routeLayers.push(seg);
+          const segOutline=L.polyline(state.trackPoints.slice(-2),{color:"#fff",weight:10,opacity:.88,smoothFactor:0,interactive:false}).addTo(state.map);
+          const seg=L.polyline(state.trackPoints.slice(-2),{color:"#117ff1",weight:6.5,opacity:.98,smoothFactor:0}).addTo(state.map);
+          state.routeLayers.push(segOutline,seg);
         }
       }
     }
@@ -588,7 +611,8 @@ function drawDetailMap(t){
   const route=tripRoute(t);if(!route.length)return;
   const m=mapBase("detailMap",route[0],10);
   const c=cat(t.category);
-  const line=L.polyline(route,{color:c.color,weight:6,dashArray:t.type==="manual"?"8 8":null,smoothFactor:0}).addTo(m);
+  const outline=L.polyline(route,{color:"#fff",weight:10,opacity:.9,dashArray:t.type==="manual"?"8 8":null,smoothFactor:0,interactive:false}).addTo(m);
+  const line=L.polyline(route,{color:c.color,weight:6,opacity:.98,dashArray:t.type==="manual"?"8 8":null,smoothFactor:0}).addTo(m);
   m.fitBounds(line.getBounds(),{padding:[24,24],maxZoom:16});
   L.marker(route[0]).addTo(m).bindPopup("出発");
   L.marker(route[route.length-1]).addTo(m).bindPopup("到着");
@@ -715,7 +739,9 @@ function refreshManualMapLayers(){
     const m=L.marker(state.manual.end).addTo(state.map).bindPopup("到着地点");state.routeLayers.push(m);points.push(state.manual.end);
   }
   if(points.length>1){
-    const l=L.polyline(points,{color:"#1585ee",weight:4,dashArray:"8 8"}).addTo(state.map);state.routeLayers.push(l);
+    const o=L.polyline(points,{color:"#fff",weight:8,opacity:.88,dashArray:"8 8",interactive:false}).addTo(state.map);
+    const l=L.polyline(points,{color:"#1585ee",weight:4.5,opacity:.96,dashArray:"8 8"}).addTo(state.map);
+    state.routeLayers.push(o,l);
   }
 }
 function saveManual(){
@@ -1151,7 +1177,7 @@ document.addEventListener("visibilitychange",()=>{
 if("serviceWorker" in navigator){
   window.addEventListener("load",async()=>{
     try{
-      const reg=await navigator.serviceWorker.register("./sw.js?v=013",{updateViaCache:"none"});
+      const reg=await navigator.serviceWorker.register("./sw.js?v=014",{updateViaCache:"none"});
       await reg.update();
     }catch{}
   });

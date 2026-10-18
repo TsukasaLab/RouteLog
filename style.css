@@ -285,3 +285,34 @@ button{cursor:pointer}
   .cat-order{grid-column:2/4;justify-content:flex-end}
   .route-search{flex-wrap:wrap}.route-search input{flex-basis:100%}
 }
+
+
+/* v0.13 設定保存ボタン / GPS現在地 */
+.settings-actions{
+  position:sticky;
+  bottom:72px;
+  z-index:40;
+  display:grid;
+  grid-template-columns:1fr 1.4fr;
+  gap:10px;
+  padding:12px 14px;
+  margin-top:14px;
+  background:rgba(245,248,251,.96);
+  border-top:1px solid #dfe7ef;
+  backdrop-filter:blur(8px);
+}
+.settings-actions .btn{min-height:48px;font-weight:700}
+
+.leaflet-interactive.gps-halo{
+  animation:gpsPulse 1.8s ease-out infinite;
+  transform-box:fill-box;
+  transform-origin:center;
+}
+@keyframes gpsPulse{
+  0%{opacity:.55}
+  65%{opacity:.15}
+  100%{opacity:.55}
+}
+.leaflet-interactive.gps-current-marker{
+  filter:drop-shadow(0 2px 5px rgba(0,0,0,.28));
+}

@@ -42,7 +42,8 @@ let state = {
   wakeLock:null,
   pickMode:null, manual:{start:null,end:null,stops:[]},
   calendarOffset:0, calendarSelected:null,
-  installPrompt:null
+  settingsDraft:null,
+  gpsMarker:null,gpsHalo:null,gpsAccuracyCircle:null
 };
 save(LS.trips,state.trips);
 
@@ -84,12 +85,13 @@ function navBtn(s,i,l,a){
   </button>`
 }
 function topbar(extra=""){
-  const live = state.tracking ? `<div class="record-badge">記録中</div>` : "";
+  const live = state.tracking ? `<div class="record-badge">${state.paused?"一時停止":"記録中"}</div>` : "";
+  const status = extra || live;
   const accountLabel = state.cloudUser?.email
     ? esc((state.cloudUser.email.split("@")[0]||"G").slice(0,1).toUpperCase())
     : "G";
   const accountBtn = `<button class="account-btn ${state.cloudUser?"signed-in":""}" id="accountBtn" aria-label="Googleアカウント">${accountLabel}</button>`;
-  return `<header class="topbar"><div class="brand"><img src="./icon-192.png?v=011" alt="">RouteLog</div><div class="top-actions">${live}${extra||""}${accountBtn}</div></header>`
+  return `<header class="topbar"><div class="brand"><img src="./icon-192.png?v=013" alt="">RouteLog</div><div class="top-actions">${status}${accountBtn}</div></header>`
 }
 function shell(content,active,extra=""){
   return `<div class="app-shell">${topbar(extra)}<main class="page">${content}</main>${nav(active)}</div>`
@@ -140,6 +142,7 @@ function go(screen,detailId=null){
 function cleanupMap(){
   if(state.map){state.map.remove();state.map=null}
   state.routeLayers=[];
+  state.gpsMarker=null;state.gpsHalo=null;state.gpsAccuracyCircle=null;
 }
 function mapBase(id,center=[35.02,135.9],zoom=10){
   const m=L.map(id,{zoomControl:false,attributionControl:false}).setView(center,zoom);
@@ -179,7 +182,6 @@ function home(){
     <section class="home-actions">
       <button class="big-action primary" data-nav="record">▶　GPS記録</button>
       <button class="big-action secondary" data-nav="manual">＋　手動で追加</button>
-      <button class="btn soft" id="installApp" style="display:${state.installPrompt?"block":"none"};grid-column:1/-1">ホーム画面にRouteLogを追加</button>
     </section>
     <section class="quick-grid">
       <button class="quick" data-nav="map"><span class="qicon">🗺</span>すべてのルート</button>
@@ -345,7 +347,18 @@ function drawRecordMap(){
   if(state.trackPoints.length){
     const line=L.polyline(state.trackPoints,{color:"#117ff1",weight:6,smoothFactor:0}).addTo(m);
     if(state.trackPoints.length>2)m.fitBounds(line.getBounds(),{padding:[24,24],maxZoom:16});
-    L.circleMarker(center,{radius:9,color:"#fff",weight:3,fillColor:"#117ff1",fillOpacity:1}).addTo(m);
+    state.gpsHalo=L.circleMarker(center,{
+      radius:22,color:"#1689f5",weight:2,opacity:.35,
+      fillColor:"#1689f5",fillOpacity:.15,className:"gps-halo"
+    }).addTo(m);
+    state.gpsMarker=L.circleMarker(center,{
+      radius:13,color:"#fff",weight:4,
+      fillColor:"#1689f5",fillOpacity:1,className:"gps-current-marker"
+    }).addTo(m);
+    state.gpsAccuracyCircle=L.circle(center,{
+      radius:30,color:"#1689f5",weight:1,opacity:.18,
+      fillColor:"#1689f5",fillOpacity:.05
+    }).addTo(m);
   }
 }
 async function requestWakeLock(){
@@ -402,8 +415,22 @@ async function beginGps(){
           const seg=L.polyline(state.trackPoints.slice(-2),{color:"#117ff1",weight:6,smoothFactor:0}).addTo(state.map);
           state.routeLayers.push(seg);
         }
-        state.map.panTo(p);
       }
+    }
+    if(state.map && state.screen==="record"){
+      if(!state.gpsHalo){
+        state.gpsHalo=L.circleMarker(p,{radius:22,color:"#1689f5",weight:2,opacity:.35,fillColor:"#1689f5",fillOpacity:.15,className:"gps-halo"}).addTo(state.map);
+      }else state.gpsHalo.setLatLng(p);
+      if(!state.gpsMarker){
+        state.gpsMarker=L.circleMarker(p,{radius:13,color:"#fff",weight:4,fillColor:"#1689f5",fillOpacity:1,className:"gps-current-marker"}).addTo(state.map);
+      }else state.gpsMarker.setLatLng(p);
+      if(!state.gpsAccuracyCircle){
+        state.gpsAccuracyCircle=L.circle(p,{radius:Math.max(10,accuracy),color:"#1689f5",weight:1,opacity:.18,fillColor:"#1689f5",fillOpacity:.05}).addTo(state.map);
+      }else{
+        state.gpsAccuracyCircle.setLatLng(p);
+        state.gpsAccuracyCircle.setRadius(Math.max(10,accuracy));
+      }
+      state.map.panTo(p);
     }
     persistActive();
     updateGpsStats(speedMps);
@@ -828,16 +855,30 @@ async function cloudSyncAll(){
 }
 
 /* ---------- Settings ---------- */
+function ensureSettingsDraft(){
+  if(state.settingsDraft)return;
+  state.settingsDraft={
+    settings:clone(state.settings),
+    categories:clone(state.categories),
+    tags:clone(state.tags)
+  };
+}
+function draftCat(id){
+  ensureSettingsDraft();
+  return state.settingsDraft.categories.find(c=>c.id===id)||{name:"その他",color:"#777",active:true};
+}
 function settings(){
+  ensureSettingsDraft();
+  const d=state.settingsDraft;
   return shell(`
     <section class="settings-group"><h3>滞在判定</h3>
       <div class="setting-row">
         <div><b>距離</b><div class="desc">この範囲に留まった時</div></div>
-        <div><input id="stayRadius" type="number" min="10" max="1000" value="${state.settings.stayRadius}"> m</div>
+        <div><input id="stayRadius" type="number" min="10" max="1000" value="${d.settings.stayRadius}"> m</div>
       </div>
       <div class="setting-row">
         <div><b>時間</b><div class="desc">立ち寄り候補にするまで</div></div>
-        <div><input id="stayMinutes" type="number" min="1" max="1440" value="${state.settings.stayMinutes}"> 分</div>
+        <div><input id="stayMinutes" type="number" min="1" max="1440" value="${d.settings.stayMinutes}"> 分</div>
       </div>
     </section>
 
@@ -849,29 +890,57 @@ function settings(){
     <section class="settings-group"><h3>タグ</h3>
       <div class="add-row"><input id="newTag" placeholder="新しいタグ"><button class="btn soft" id="addTag">＋追加</button></div>
       <div style="padding:0 14px 14px" class="tags">
-        ${state.tags.map(t=>`<span class="pill">${esc(t)} <button class="tagDel" data-tag="${esc(t)}" style="border:0;background:none">×</button></span>`).join("")}
+        ${d.tags.map(t=>`<span class="pill">${esc(t)} <button class="tagDel" data-tag="${esc(t)}" style="border:0;background:none">×</button></span>`).join("")}
       </div>
     </section>
+
+    <div class="settings-actions">
+      <button class="btn" id="cancelSettings">キャンセル</button>
+      <button class="btn primary" id="saveSettings">保存</button>
+    </div>
   `,"settings");
 }
 function catRows(){
-  return state.categories.map((c,i)=>`
+  ensureSettingsDraft();
+  const cats=state.settingsDraft.categories;
+  return cats.map((c,i)=>`
     <div class="cat-row cat-row-v11">
       <input class="catColor" data-id="${c.id}" type="color" value="${c.color}">
       <input class="catName" data-id="${c.id}" value="${esc(c.name)}" aria-label="カテゴリ名">
       <label class="cat-show"><input class="catActive" data-id="${c.id}" type="checkbox" ${c.active?"checked":""}>表示</label>
       <div class="cat-order">
         <button class="mini-btn catMove" data-id="${c.id}" data-dir="-1" ${i===0?"disabled":""}>↑</button>
-        <button class="mini-btn catMove" data-id="${c.id}" data-dir="1" ${i===state.categories.length-1?"disabled":""}>↓</button>
+        <button class="mini-btn catMove" data-id="${c.id}" data-dir="1" ${i===cats.length-1?"disabled":""}>↓</button>
       </div>
       <button class="mini-btn catDel" data-id="${c.id}">×</button>
     </div>`).join("")
 }
 function moveCategory(id,dir){
-  const i=state.categories.findIndex(c=>c.id===id);if(i<0)return;
-  const j=i+dir;if(j<0||j>=state.categories.length)return;
-  [state.categories[i],state.categories[j]]=[state.categories[j],state.categories[i]];
-  save(LS.categories,state.categories);cloudSavePrefs();render();
+  ensureSettingsDraft();
+  const cats=state.settingsDraft.categories;
+  const i=cats.findIndex(c=>c.id===id);if(i<0)return;
+  const j=i+dir;if(j<0||j>=cats.length)return;
+  [cats[i],cats[j]]=[cats[j],cats[i]];
+  render();
+}
+function saveSettingsChanges(){
+  ensureSettingsDraft();
+  state.settings=clone(state.settingsDraft.settings);
+  state.categories=clone(state.settingsDraft.categories);
+  state.tags=clone(state.settingsDraft.tags);
+  state.mapCats=state.mapCats.filter(id=>state.categories.some(c=>c.id===id&&c.active));
+  state.categories.filter(c=>c.active).forEach(c=>{if(!state.mapCats.includes(c.id))state.mapCats.push(c.id)});
+  save(LS.settings,state.settings);
+  save(LS.categories,state.categories);
+  save(LS.tags,state.tags);
+  state.settingsDraft=null;
+  cloudSavePrefs().catch(()=>{});
+  toast("保存しました");
+  go("home");
+}
+function cancelSettingsChanges(){
+  state.settingsDraft=null;
+  go("home");
 }
 
 /* ---------- Calendar / Stats ---------- */
@@ -955,11 +1024,6 @@ function render(){
 function bind(){
   document.querySelectorAll("[data-nav]").forEach(b=>b.onclick=()=>go(b.dataset.nav));
   document.querySelector("#accountBtn")?.addEventListener("click",showAccountPanel);
-  document.querySelector("#installApp")?.addEventListener("click",async()=>{
-    if(!state.installPrompt){toast("Chromeのメニューから「ホーム画面に追加」を選んでください");return}
-    state.installPrompt.prompt();await state.installPrompt.userChoice.catch(()=>{});
-    state.installPrompt=null;render();
-  });
   document.querySelectorAll("[data-trip]").forEach(b=>b.onclick=()=>go("detail",b.dataset.trip));
 
   document.querySelector("#beginGps")?.addEventListener("click",beginGps);
@@ -1004,48 +1068,54 @@ function bind(){
   document.querySelector("#cancelTripEdit")?.addEventListener("click",()=>go("detail",state.detailId));
   document.querySelector("#deleteTrip")?.addEventListener("click",()=>deleteTrip(state.detailId));
 
-  document.querySelector("#stayRadius")?.addEventListener("change",e=>{
-    state.settings.stayRadius=Math.max(10,Number(e.target.value)||80);save(LS.settings,state.settings);cloudSavePrefs();
-  });
-  document.querySelector("#stayMinutes")?.addEventListener("change",e=>{
-    state.settings.stayMinutes=Math.max(1,Number(e.target.value)||5);save(LS.settings,state.settings);cloudSavePrefs();
-  });
-  document.querySelectorAll(".catActive").forEach(x=>x.onchange=e=>{
-    cat(e.target.dataset.id).active=e.target.checked;
-    if(e.target.checked&&!state.mapCats.includes(e.target.dataset.id))state.mapCats.push(e.target.dataset.id);
-    save(LS.categories,state.categories);cloudSavePrefs();
-  });
-  document.querySelectorAll(".catColor").forEach(x=>x.onchange=e=>{
-    cat(e.target.dataset.id).color=e.target.value;save(LS.categories,state.categories);cloudSavePrefs();
-  });
-  document.querySelectorAll(".catName").forEach(x=>x.onchange=e=>{
-    const name=e.target.value.trim();if(name)cat(e.target.dataset.id).name=name;
-    else e.target.value=cat(e.target.dataset.id).name;
-    save(LS.categories,state.categories);cloudSavePrefs();
-  });
-  document.querySelectorAll(".catMove").forEach(x=>x.onclick=e=>moveCategory(e.currentTarget.dataset.id,Number(e.currentTarget.dataset.dir)));
-  document.querySelectorAll(".catDel").forEach(x=>x.onclick=e=>{
-    const id=e.currentTarget.dataset.id;
-    if(state.trips.some(t=>t.category===id)){
-      cat(id).active=false;state.mapCats=state.mapCats.filter(x=>x!==id);toast("使っているカテゴリなので非表示にしました");
-    }else{
-      state.categories=state.categories.filter(c=>c.id!==id);state.mapCats=state.mapCats.filter(x=>x!==id);
-    }
-    save(LS.categories,state.categories);cloudSavePrefs();render();
-  });
-  document.querySelector("#addCat")?.addEventListener("click",()=>{
-    const name=v("#newCat").trim();if(!name)return;
-    const id="c"+Date.now();state.categories.push({id,name,color:"#1689f5",active:true});state.mapCats.push(id);
-    save(LS.categories,state.categories);cloudSavePrefs();render();
-  });
-  document.querySelector("#addTag")?.addEventListener("click",()=>{
-    const t=v("#newTag").trim();if(!t||state.tags.includes(t))return;
-    state.tags.push(t);save(LS.tags,state.tags);cloudSavePrefs();render();
-  });
-  document.querySelectorAll(".tagDel").forEach(x=>x.onclick=e=>{
-    state.tags=state.tags.filter(t=>t!==e.currentTarget.dataset.tag);
-    save(LS.tags,state.tags);cloudSavePrefs();render();
-  });
+  if(state.screen==="settings"){
+    ensureSettingsDraft();
+
+    document.querySelector("#stayRadius")?.addEventListener("input",e=>{
+      state.settingsDraft.settings.stayRadius=Math.max(10,Number(e.target.value)||80);
+    });
+    document.querySelector("#stayMinutes")?.addEventListener("input",e=>{
+      state.settingsDraft.settings.stayMinutes=Math.max(1,Number(e.target.value)||5);
+    });
+    document.querySelectorAll(".catActive").forEach(x=>x.onchange=e=>{
+      draftCat(e.target.dataset.id).active=e.target.checked;
+    });
+    document.querySelectorAll(".catColor").forEach(x=>x.onchange=e=>{
+      draftCat(e.target.dataset.id).color=e.target.value;
+    });
+    document.querySelectorAll(".catName").forEach(x=>x.oninput=e=>{
+      draftCat(e.target.dataset.id).name=e.target.value;
+    });
+    document.querySelectorAll(".catMove").forEach(x=>x.onclick=e=>moveCategory(e.currentTarget.dataset.id,Number(e.currentTarget.dataset.dir)));
+    document.querySelectorAll(".catDel").forEach(x=>x.onclick=e=>{
+      const id=e.currentTarget.dataset.id;
+      const used=state.trips.some(t=>t.category===id);
+      if(used){
+        draftCat(id).active=false;
+        toast("使っているカテゴリなので非表示にしました");
+      }else{
+        state.settingsDraft.categories=state.settingsDraft.categories.filter(c=>c.id!==id);
+      }
+      render();
+    });
+    document.querySelector("#addCat")?.addEventListener("click",()=>{
+      const name=v("#newCat").trim();if(!name)return;
+      const id="c"+Date.now();
+      state.settingsDraft.categories.push({id,name,color:"#1689f5",active:true});
+      render();
+    });
+    document.querySelector("#addTag")?.addEventListener("click",()=>{
+      const t=v("#newTag").trim();if(!t||state.settingsDraft.tags.includes(t))return;
+      state.settingsDraft.tags.push(t);render();
+    });
+    document.querySelectorAll(".tagDel").forEach(x=>x.onclick=e=>{
+      state.settingsDraft.tags=state.settingsDraft.tags.filter(t=>t!==e.currentTarget.dataset.tag);
+      render();
+    });
+
+    document.querySelector("#saveSettings")?.addEventListener("click",saveSettingsChanges);
+    document.querySelector("#cancelSettings")?.addEventListener("click",cancelSettingsChanges);
+  }
 
   document.querySelectorAll("[data-calnav]").forEach(x=>x.onclick=e=>{
     state.calendarOffset+=Number(e.currentTarget.dataset.calnav);state.calendarSelected=null;render();
@@ -1077,21 +1147,11 @@ window.addEventListener("beforeunload",()=>{
 document.addEventListener("visibilitychange",()=>{
   if(document.visibilityState==="visible"&&state.tracking&&!state.wakeLock)requestWakeLock()
 });
-window.addEventListener("beforeinstallprompt",e=>{
-  e.preventDefault();
-  state.installPrompt=e;
-  const btn=document.querySelector("#installApp");
-  if(btn)btn.style.display="block";
-});
-window.addEventListener("appinstalled",()=>{
-  state.installPrompt=null;
-  toast("RouteLogを追加しました");
-});
 
 if("serviceWorker" in navigator){
   window.addEventListener("load",async()=>{
     try{
-      const reg=await navigator.serviceWorker.register("./sw.js?v=011",{updateViaCache:"none"});
+      const reg=await navigator.serviceWorker.register("./sw.js?v=013",{updateViaCache:"none"});
       await reg.update();
     }catch{}
   });

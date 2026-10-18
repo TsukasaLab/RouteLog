@@ -1,15 +1,15 @@
-const CACHE="routelog-v011";
+const CACHE="routelog-v013";
 const BASE="/RouteLog/";
 const ASSETS=[
   BASE,
   BASE+"index.html",
-  BASE+"style.css?v=011",
-  BASE+"app.js?v=011",
-  BASE+"mock-data.js?v=011",
-  BASE+"manifest.json?v=011",
+  BASE+"style.css?v=013",
+  BASE+"app.js?v=013",
+  BASE+"mock-data.js?v=013",
+  BASE+"manifest.json?v=013",
   BASE+"hero.jpg",
-  BASE+"icon-192.png?v=011",
-  BASE+"icon-512.png?v=011"
+  BASE+"icon-192.png?v=013",
+  BASE+"icon-512.png?v=013"
 ];
 
 self.addEventListener("install", event => {

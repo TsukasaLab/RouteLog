@@ -114,3 +114,121 @@ button{cursor:pointer}
   .trip-card{grid-template-columns:100px 1fr 28px}
   .thumb{width:100px;height:74px}
 }
+
+
+/* v0.04 */
+.filter-card{
+  max-width:270px;
+  padding:0;
+  overflow:hidden;
+}
+.filter-card summary{
+  list-style:none;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:11px 12px;
+  font-weight:850;
+  user-select:none;
+}
+.filter-card summary::-webkit-details-marker{display:none}
+.filter-card summary::after{
+  content:"⌄";
+  font-size:18px;
+  color:#4b6681;
+  transition:.2s;
+}
+.filter-card[open] summary::after{transform:rotate(180deg)}
+.filter-card .filter-body{
+  padding:0 12px 10px;
+  border-top:1px solid #e7eef5;
+}
+.map-wrap .leaflet-bottom.leaflet-right{
+  margin-right:4px;
+  margin-bottom:4px;
+}
+.map-wrap .leaflet-control-zoom,
+.record-map .leaflet-control-zoom,
+.manual-map .leaflet-control-zoom,
+.detail-map .leaflet-control-zoom{
+  box-shadow:0 3px 12px rgba(23,59,94,.22);
+  border:none;
+}
+.record-wait{
+  margin:12px;
+  padding:18px 16px;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:14px;
+  box-shadow:var(--shadow);
+  text-align:center;
+}
+.record-wait h2{margin:0 0 7px;font-size:21px}
+.record-wait p{margin:0 0 14px;color:var(--muted);font-size:13px}
+.record-start-btn{
+  width:100%;
+  border:0;
+  border-radius:13px;
+  background:linear-gradient(135deg,#1592ff,#167fe6);
+  color:white;
+  padding:17px 12px;
+  font-size:20px;
+  font-weight:900;
+}
+.record-live-note{
+  padding:8px 12px;
+  background:#eef7ff;
+  color:#235b88;
+  font-size:12px;
+  text-align:center;
+}
+.cloud-status{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+}
+.cloud-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#aab7c4;
+  flex:0 0 auto;
+}
+.cloud-dot.ok{background:#20ad57}
+.cloud-dot.warn{background:#ef9b18}
+.cloud-dot.ng{background:#ef5350}
+.cloud-key{
+  width:100%;
+  min-height:84px;
+  resize:vertical;
+  padding:10px 11px;
+  border:1px solid #ccd8e4;
+  border-radius:9px;
+}
+.cloud-help{
+  padding:0 14px 14px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.6;
+}
+.cloud-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  padding:0 14px 14px;
+}
+.track-warning{
+  margin:10px 12px 0;
+  padding:10px 12px;
+  border-radius:10px;
+  background:#fff7da;
+  border:1px solid #ead47b;
+  color:#6d5a18;
+  font-size:12px;
+}
+@media(max-width:480px){
+  .filter-card{max-width:225px}
+}

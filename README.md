@@ -1,4 +1,4 @@
-# RouteLog v0.05
+# RouteLog v0.06
 
 GPS移動記録・ルート履歴管理Webアプリの初期実装です。
 
@@ -64,3 +64,9 @@ Supabase AuthenticationでGoogle Providerを有効にし、RouteLog設定画面�
 - 設定画面は「アカウント」「滞在判定」「カテゴリ」「タグ」「データ」に整理
 - 匿名ログインを廃止
 - 起動時にログイン済みなら自動同期
+
+
+## v0.06
+- Supabase Project URL の誤記を修正（末尾 `...bicb`）
+- Googleログイン時の接続先エラーを修正
+- PWAキャッシュを更新

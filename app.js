@@ -13,7 +13,7 @@ function clone(v){try{return structuredClone(v)}catch{return JSON.parse(JSON.str
 function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):clone(d)}catch{return clone(d)}}
 function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
 
-const defaultCloud = {url:"https://pmvtelodpxjwwklybibc.supabase.co",anonKey:"sb_publishable_KEcfQP5KbJk_NVp0jfaAMg_bCDUT0m0"};
+const defaultCloud = {url:"https://pmvtelodpxjwwklybicb.supabase.co",anonKey:"sb_publishable_KEcfQP5KbJk_NVp0jfaAMg_bCDUT0m0"};
 const restoredActive = load(LS.active,null);
 
 let state = {

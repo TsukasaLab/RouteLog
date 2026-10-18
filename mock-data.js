@@ -1,0 +1,49 @@
+window.ROUTELOG_SAMPLE = {
+  categories: [
+    {id:"drive",name:"ドライブ",color:"#1689f5",active:true},
+    {id:"travel",name:"旅行",color:"#ff8a24",active:true},
+    {id:"golf",name:"ゴルフ",color:"#20ad57",active:true},
+    {id:"shopping",name:"買い物",color:"#b54bdc",active:true},
+    {id:"eat",name:"外食",color:"#ef5350",active:true},
+    {id:"work",name:"通勤・仕事",color:"#7b8da0",active:true},
+    {id:"other",name:"その他",color:"#8d7666",active:true}
+  ],
+  tags:["家族","下道","高速","ラーメン","温泉","車中泊"],
+  settings:{stayRadius:80,stayMinutes:5},
+  trips:[
+    {
+      id:"t1",date:"2026-10-17",title:"敦賀ラーメンドライブ",category:"drive",tags:["家族","ラーメン","下道"],
+      type:"gps",distanceKm:198,durationMin:252,startName:"大津市（自宅）",endName:"大津市（自宅）",
+      thumb:"https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=300&q=70",
+      route:[[35.003,135.875],[35.080,135.865],[35.160,135.845],[35.245,135.790],[35.330,135.750],[35.420,135.720],[35.520,135.685],[35.610,135.615],[35.645,136.055],[35.590,136.020],[35.300,135.850],[35.003,135.875]],
+      stops:[
+        {name:"草津PA（上り）",time:"09:45",duration:"17分",lat:35.029,lng:135.934},
+        {name:"敦賀 ○○ラーメン",time:"13:21",duration:"1時間12分",lat:35.645,lng:136.055}
+      ]
+    },
+    {
+      id:"t2",date:"2026-10-16",title:"宇治田原ゴルフクラブ",category:"golf",tags:["ゴルフ","下道"],
+      type:"gps",distanceKm:72,durationMin:125,startName:"大津市",endName:"宇治田原ゴルフクラブ",
+      thumb:"https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?auto=format&fit=crop&w=300&q=70",
+      route:[[35.003,135.875],[34.978,135.901],[34.948,135.918],[34.905,135.900],[34.853,135.893]],
+      stops:[{name:"宇治田原ゴルフクラブ",time:"08:02",duration:"5時間02分",lat:34.853,lng:135.893}]
+    },
+    {
+      id:"t3",date:"2026-09-20",title:"中部旅行（白樺湖 → 名古屋）",category:"travel",tags:["家族","高速","車中泊"],
+      type:"gps",distanceKm:312,durationMin:388,startName:"白樺湖",endName:"名古屋",
+      thumb:"https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=300&q=70",
+      route:[[36.103,138.239],[35.923,137.956],[35.561,137.656],[35.391,137.438],[35.181,136.906]],
+      stops:[
+        {name:"道の駅",time:"10:20",duration:"22分",lat:35.923,lng:137.956},
+        {name:"サービスエリア",time:"14:05",duration:"38分",lat:35.561,lng:137.656}
+      ]
+    },
+    {
+      id:"t4",date:"2026-10-10",title:"イオンモール草津",category:"shopping",tags:["家族"],
+      type:"manual",distanceKm:18,durationMin:65,startName:"大津市",endName:"イオンモール草津",
+      thumb:"https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?auto=format&fit=crop&w=300&q=70",
+      route:[[35.003,135.875],[34.999,135.916],[35.004,135.935]],
+      stops:[{name:"イオンモール草津",time:"10:10",duration:"1時間05分",lat:35.004,lng:135.935}]
+    }
+  ]
+};

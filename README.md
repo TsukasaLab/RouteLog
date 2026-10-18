@@ -1,4 +1,4 @@
-# RouteLog v0.07
+# RouteLog v0.08
 
 GPS移動記録・ルート履歴管理Webアプリの初期実装です。
 
@@ -79,3 +79,11 @@ Supabase AuthenticationでGoogle Providerを有効にし、RouteLog設定画面�
 - PWAのid / scope / start_urlを `/RouteLog/` に固定
 - Chromeが対応している場合「ホーム画面にRouteLogを追加」ボタンを表示
 - `.nojekyll`を追加
+
+
+## v0.08
+- 自作ツール共通方針に合わせ、Googleアカウント操作を右上へ統一
+- 設定画面からクラウド・同期・Supabase等の専門用語を削除
+- 設定画面からアカウント項目も削除
+- 右上のアカウントボタンからGoogleログイン / ログアウト
+- 保存と端末間共有は自動処理し、利用者に意識させない設計へ変更

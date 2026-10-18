@@ -61,10 +61,51 @@ function navBtn(s,i,l,a){
 }
 function topbar(extra=""){
   const live = state.tracking ? `<div class="record-badge">記録中</div>` : "";
-  return `<header class="topbar"><div class="brand"><img src="./icon-192.png?v=004" alt="">RouteLog</div>${extra||live||`<button class="icon-btn" id="menuBtn">☰</button>`}</header>`
+  const accountLabel = state.cloudUser?.email
+    ? esc((state.cloudUser.email.split("@")[0]||"G").slice(0,1).toUpperCase())
+    : "G";
+  const accountBtn = `<button class="account-btn ${state.cloudUser?"signed-in":""}" id="accountBtn" aria-label="Googleアカウント">${accountLabel}</button>`;
+  return `<header class="topbar"><div class="brand"><img src="./icon-192.png?v=008" alt="">RouteLog</div><div class="top-actions">${live}${extra||""}${accountBtn}</div></header>`
 }
 function shell(content,active,extra=""){
   return `<div class="app-shell">${topbar(extra)}<main class="page">${content}</main>${nav(active)}</div>`
+}
+
+function showAccountPanel(){
+  document.querySelector("#accountPanel")?.remove();
+  const signedIn = !!state.cloudUser;
+  const panel=document.createElement("div");
+  panel.id="accountPanel";
+  panel.className="account-panel-wrap";
+  panel.innerHTML=`
+    <div class="account-panel-backdrop" id="accountPanelClose"></div>
+    <div class="account-panel">
+      <div class="account-panel-head"><b>アカウント</b><button class="icon-btn" id="accountPanelX">×</button></div>
+      ${signedIn
+        ? `<div class="account-email">${esc(state.cloudUser.email||"Googleアカウント")}</div>
+           <button class="btn" id="accountLogout">ログアウト</button>`
+        : `<button class="btn primary" id="accountLogin">Googleでログイン</button>`}
+    </div>`;
+  document.body.appendChild(panel);
+  const close=()=>panel.remove();
+  panel.querySelector("#accountPanelClose")?.addEventListener("click",close);
+  panel.querySelector("#accountPanelX")?.addEventListener("click",close);
+  panel.querySelector("#accountLogin")?.addEventListener("click",async()=>{
+    close();
+    await cloudGoogleLogin();
+  });
+  panel.querySelector("#accountLogout")?.addEventListener("click",async()=>{
+    try{
+      await state.cloudClient?.auth.signOut();
+      state.cloudUser=null;
+      state.cloudStatus="未ログイン";
+      toast("ログアウトしました");
+      close();
+      render();
+    }catch{
+      toast("ログアウトできませんでした");
+    }
+  });
 }
 function go(screen,detailId=null){
   cleanupMap();
@@ -441,7 +482,7 @@ function cloudStatusHtml(){
 }
 async function initCloud(showToast=false){
   if(!window.supabase?.createClient){
-    state.cloudStatus="接続準備に失敗";return false;
+    state.cloudStatus="保存準備に失敗";return false;
   }
   try{
     state.cloudClient=window.supabase.createClient(state.cloud.url,state.cloud.anonKey,{
@@ -451,16 +492,16 @@ async function initCloud(showToast=false){
     if(error)throw error;
     state.cloudUser=session?.user||null;
     if(state.cloudUser){
-      state.cloudStatus=`同期中：${state.cloudUser.email||"Googleアカウント"}`;
-      if(showToast)toast("Googleアカウントでログイン済みです");
+      state.cloudStatus="保存中";
+      if(showToast)toast("ログインしています");
       return true;
     }
     state.cloudStatus="未ログイン";
-    if(showToast)toast("Googleでログインしてください");
+    if(showToast)toast("右上からGoogleでログインしてください");
     return false;
   }catch(e){
-    state.cloudStatus="接続失敗";
-    if(showToast)toast("接続に失敗しました。もう一度開き直してください");
+    state.cloudStatus="保存できません";
+    if(showToast)toast("保存の準備に失敗しました。もう一度開き直してください");
     return false;
   }
 }
@@ -478,15 +519,15 @@ async function cloudSaveTrip(t){
   if(!state.cloudUser)return;
   try{
     await cloudUpsert("trip:"+t.id,t);
-    state.cloudStatus=`同期済み：${state.cloudUser.email||"Googleアカウント"}`;
-  }catch(e){state.cloudStatus="同期に失敗"}
+    state.cloudStatus="保存済み";
+  }catch(e){state.cloudStatus="保存できません"}
 }
 async function cloudSavePrefs(){
   if(!state.cloudUser)return;
   try{
     await cloudUpsert("prefs",{categories:state.categories,tags:state.tags,settings:state.settings});
-    state.cloudStatus=`同期済み：${state.cloudUser.email||"Googleアカウント"}`;
-  }catch(e){state.cloudStatus="同期に失敗"}
+    state.cloudStatus="保存済み";
+  }catch(e){state.cloudStatus="保存できません"}
 }
 
 async function cloudGoogleLogin(){
@@ -508,7 +549,7 @@ async function cloudSyncAll(){
   if(state.syncing)return;
   state.syncing=true;state.cloudStatus="同期中";render();
   try{
-    const ok=await initCloud(false);if(!ok){toast("先にGoogleでログインしてください");return;}
+    const ok=await initCloud(false);if(!ok){toast("右上からGoogleでログインしてください");return;}
     const {data,error}=await state.cloudClient.from("routelog_data").select("key,payload,updated_at");
     if(error)throw error;
     const cloudTrips=[];
@@ -546,64 +587,28 @@ async function cloudSyncAll(){
 
 /* ---------- Settings ---------- */
 function settings(){
-  const accountHtml = state.cloudUser
-    ? `<div class="setting-row">
-         <div>
-           <b>${esc(state.cloudUser.email||"Googleアカウント")}</b>
-           <div class="desc">このアカウントに記録を自動保存します</div>
-         </div>
-         <button class="btn" id="cloudLogout">ログアウト</button>
-       </div>
-       <div class="setting-row">
-         <div class="cloud-status"><span class="cloud-dot ok"></span><b>${esc(state.cloudStatus)}</b></div>
-       </div>`
-    : `<div class="setting-row">
-         <div>
-           <b>Googleアカウント</b>
-           <div class="desc">ログインすると記録が自動保存され、別の端末でも使えます</div>
-         </div>
-       </div>
-       <div class="cloud-actions" style="grid-template-columns:1fr">
-         <button class="btn primary" id="googleCloud">Googleでログイン</button>
-       </div>`;
-
   return shell(`
-    <section class="settings-group"><h3>アカウント</h3>
-      ${accountHtml}
-    </section>
-
-    <section class="settings-group"><h3>滞在判定の設定</h3>
+    <section class="settings-group"><h3>滞在判定</h3>
       <div class="setting-row">
-        <div><b>滞在判定距離</b><div class="desc">この半径内に留まった場合</div></div>
+        <div><b>距離</b></div>
         <div><input id="stayRadius" type="number" min="10" max="1000" value="${state.settings.stayRadius}"> m</div>
       </div>
       <div class="setting-row">
-        <div><b>滞在判定時間</b><div class="desc">一定時間動かなければ候補化</div></div>
+        <div><b>時間</b></div>
         <div><input id="stayMinutes" type="number" min="1" max="1440" value="${state.settings.stayMinutes}"> 分</div>
       </div>
     </section>
 
-    <section class="settings-group"><h3>カテゴリ管理</h3>
+    <section class="settings-group"><h3>カテゴリ</h3>
       <div id="catRows">${catRows()}</div>
-      <div class="add-row"><input id="newCat" placeholder="新しいカテゴリ名"><button class="btn soft" id="addCat">＋追加</button></div>
+      <div class="add-row"><input id="newCat" placeholder="新しいカテゴリ"><button class="btn soft" id="addCat">＋追加</button></div>
     </section>
 
-    <section class="settings-group"><h3>タグ管理</h3>
+    <section class="settings-group"><h3>タグ</h3>
       <div class="add-row"><input id="newTag" placeholder="新しいタグ"><button class="btn soft" id="addTag">＋追加</button></div>
       <div style="padding:0 14px 14px" class="tags">
         ${state.tags.map(t=>`<span class="pill">${esc(t)} <button class="tagDel" data-tag="${esc(t)}" style="border:0;background:none">×</button></span>`).join("")}
       </div>
-    </section>
-
-    <section class="settings-group"><h3>データ</h3>
-      <div class="setting-row">
-        <div>
-          <b>同期</b>
-          <div class="desc">${state.cloudUser?"Googleアカウントへ自動保存中":"Googleログイン後に自動保存されます"}</div>
-        </div>
-        ${state.cloudUser?`<button class="btn soft" id="syncCloud">同期する</button>`:""}
-      </div>
-      <div class="setting-row"><span>サンプルデータに戻す</span><button class="btn" id="resetSample">リセット</button></div>
     </section>
   `,"settings");
 }
@@ -667,6 +672,7 @@ function render(){
 }
 function bind(){
   document.querySelectorAll("[data-nav]").forEach(b=>b.onclick=()=>go(b.dataset.nav));
+  document.querySelector("#accountBtn")?.addEventListener("click",showAccountPanel);
   document.querySelector("#installApp")?.addEventListener("click",async()=>{
     if(!state.installPrompt){
       toast("Chromeのメニューから「ホーム画面に追加」を選んでください");
@@ -708,13 +714,6 @@ function bind(){
   document.querySelector("#saveManual")?.addEventListener("click",saveManual);
   document.querySelector("#syncCloud")?.addEventListener("click",cloudSyncAll);
   document.querySelector("#googleCloud")?.addEventListener("click",cloudGoogleLogin);
-  document.querySelector("#cloudLogout")?.addEventListener("click",async()=>{
-    try{
-      if(state.cloudClient)await state.cloudClient.auth.signOut();
-      state.cloudUser=null;state.cloudStatus="未ログイン";
-      toast("クラウドからログアウトしました");render();
-    }catch(e){toast("ログアウトに失敗しました")}
-  });
 
   document.querySelector("#stayRadius")?.addEventListener("change",e=>{
     state.settings.stayRadius=Number(e.target.value);save(LS.settings,state.settings);cloudSavePrefs();toast("保存しました")
@@ -793,7 +792,7 @@ window.addEventListener("appinstalled",()=>{
 if("serviceWorker" in navigator){
   window.addEventListener("load",async()=>{
     try{
-      const reg=await navigator.serviceWorker.register("./sw.js?v=007",{updateViaCache:"none"});
+      const reg=await navigator.serviceWorker.register("./sw.js?v=008",{updateViaCache:"none"});
       await reg.update();
     }catch{}
   });

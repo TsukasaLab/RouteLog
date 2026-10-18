@@ -7,19 +7,19 @@
   "theme_color": "#173b5e",
   "icons": [
     {
-      "src": "/RouteLog/icon-192.png?v=007",
+      "src": "/RouteLog/icon-192.png?v=008",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/RouteLog/icon-512.png?v=007",
+      "src": "/RouteLog/icon-512.png?v=008",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/RouteLog/icon-512.png?v=007",
+      "src": "/RouteLog/icon-512.png?v=008",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
